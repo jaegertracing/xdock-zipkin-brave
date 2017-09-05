@@ -68,6 +68,12 @@
       <artifactId>zipkin-sender-okhttp3</artifactId>
       <version>${version.io.zipkin.reporter-zipkin-sender-okhttp3}</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

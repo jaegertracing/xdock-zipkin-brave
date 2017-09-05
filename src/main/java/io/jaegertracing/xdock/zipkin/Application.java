@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.catalina.connector.Connector;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.embedded.EmbeddedServletContainerFactory;
@@ -36,19 +37,23 @@ import zipkin.reporter.okhttp3.OkHttpSender;
  * @author Pavol Loffay
  */
 @SpringBootApplication
-public class Main {
+public class Application {
     private static final String SERVICE_NAME = "crossdock-zipkin-brave";
     private static final String ENCODING_ENV_VAR = "ENCODING";
 
     public static void main(String []args) {
-        SpringApplication.run(Main.class, args);
+        SpringApplication.run(Application.class, args);
     }
 
-    public static class Configuration {
+    class Configuration {
         private final Encoding encoding;
 
         public Configuration() {
-            encoding = Encoding.valueOf(System.getenv(ENCODING_ENV_VAR));
+            String encodingStr = System.getenv(ENCODING_ENV_VAR);
+            if (encodingStr == null) {
+                encodingStr = encodingProp;
+            }
+            encoding = Encoding.valueOf(encodingStr);
         }
 
         public Encoding getEncoding() {
@@ -59,6 +64,9 @@ public class Main {
             return String.format("%s-%s", SERVICE_NAME, encoding);
         }
     }
+
+    @Value("${zipkin.encoding}")
+    private String encodingProp;
 
     @Bean
     public Configuration configuration() {
