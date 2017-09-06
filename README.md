@@ -1,3 +1,5 @@
+[![Build Status][ci-img]][ci] [![Released Version][maven-img]][maven]
+
 # Crossdock Zipkin Brave
 
 This is a [crossdock](https://github.com/uber/jaeger/tree/master/crossdock) app to test Zipkin data format support in Jaeger server. 
@@ -10,3 +12,6 @@ Docker image is automatically built once commit is pushed to the master branch.
 docker build -t pavolloffay/xdock-zipkin-brave:latest .
 docker push pavolloffay/xdock-zipkin-brave:latest
 ```
+
+   [ci-img]: https://travis-ci.org/jaegertracing/xdock-zipkin-brave.svg?branch=master
+   [ci]: https://travis-ci.org/jaegertracing/xdock-zipkin-brave
