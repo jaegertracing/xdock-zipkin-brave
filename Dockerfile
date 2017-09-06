@@ -24,9 +24,10 @@ COPY .mvn $APP_HOME/.mvn
 COPY mvnw $APP_HOME
 
 WORKDIR $APP_HOME
-RUN ./mvnw package
+RUN ./mvnw package -Dlicense.skip=true && rm -rf ~/.m2
 
 EXPOSE 8080
 EXPOSE 8081
 
-CMD ["java", "-jar", "target/jaegertracing-xdock-brave-0.0.1-SNAPSHOT.jar"]
+# set ENCODING env variable when running the container
+CMD java -jar -Dzipkin.encoding=$ENCODING target/jaegertracing-xdock-brave-0.0.1-SNAPSHOT.jar

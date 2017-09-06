@@ -34,58 +34,38 @@ import zipkin.reporter.Sender;
 import zipkin.reporter.okhttp3.OkHttpSender;
 
 /**
+ * Application used in Jaeger crossdock test to verify that server can consume Zipkin data format.
+ *
  * @author Pavol Loffay
  */
 @SpringBootApplication
 public class Application {
-    private static final String SERVICE_NAME = "crossdock-zipkin-brave";
-    private static final String ENCODING_ENV_VAR = "ENCODING";
+    private static final String SERVICE_NAME_PREFIX = "crossdock-zipkin-brave";
 
     public static void main(String []args) {
         SpringApplication.run(Application.class, args);
     }
 
-    class Configuration {
-        private final Encoding encoding;
-
-        public Configuration() {
-            String encodingStr = System.getenv(ENCODING_ENV_VAR);
-            if (encodingStr == null) {
-                encodingStr = encodingProp;
-            }
-            encoding = Encoding.valueOf(encodingStr);
-        }
-
-        public Encoding getEncoding() {
-            return encoding;
-        }
-
-        public String getServiceName() {
-            return String.format("%s-%s", SERVICE_NAME, encoding);
-        }
+    public String getServiceName() {
+        return String.format("%s-%s", SERVICE_NAME_PREFIX, encoding);
     }
 
     @Value("${zipkin.encoding}")
-    private String encodingProp;
+    private Encoding encoding;
 
     @Bean
-    public Configuration configuration() {
-        return new Configuration();
-    }
-
-    @Bean
-    public AsyncReporter<Span> reporter(Configuration configuration) {
+    public AsyncReporter<Span> reporter() {
         Sender sender = OkHttpSender.builder()
                 .endpoint("http://test_driver:9411/api/v1/spans")
-                .encoding(configuration.getEncoding())
+                .encoding(encoding)
                 .build();
         return AsyncReporter.builder(sender).build();
     }
 
     @Bean
-    public Tracing tracer(Reporter<Span> reporter, Configuration configuration) {
+    public Tracing tracer(Reporter<Span> reporter) {
         return Tracing.newBuilder()
-                .localServiceName(configuration.getServiceName())
+                .localServiceName(getServiceName())
                 .sampler(Sampler.ALWAYS_SAMPLE)
                 .traceId128Bit(true)
                 .reporter(reporter)
