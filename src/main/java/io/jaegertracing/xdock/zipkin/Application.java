@@ -47,7 +47,7 @@ public class Application {
     }
 
     public String getServiceName() {
-        return String.format("%s-%s", SERVICE_NAME_PREFIX, encoding);
+        return String.format("%s-%s", SERVICE_NAME_PREFIX, encoding).toLowerCase();
     }
 
     @Value("${zipkin.encoding}")
