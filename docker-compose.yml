@@ -1,0 +1,47 @@
+version: '2'
+
+services:
+    crossdock:
+        image: crossdock/crossdock
+        links:
+            - test_driver
+            - zipkin-brave-json
+            - zipkin-brave-thrift
+        environment:
+            - WAIT_FOR=test_driver,zipkin-brave-json,zipkin-brave-thrift
+            - WAIT_FOR_TIMEOUT=60s
+
+            - CALL_TIMEOUT=60s
+
+            - AXIS_CLIENTS=test_driver
+            - AXIS_SERVICES=zipkin-brave-json,zipkin-brave-thrift
+
+            - BEHAVIOR_ENDTOEND=clients,services
+
+            - REPORT=compact
+
+    zipkin-brave-json:
+        build: .
+        ports:
+            - "8080-8081"
+        environment:
+            - ENCODING=JSON
+
+    zipkin-brave-thrift:
+        build: .
+        ports:
+            - "8080-8081"
+        environment:
+            - ENCODING=THRIFT
+
+    test_driver:
+        image: jaegertracing/test-driver
+        links:
+            - cassandra
+        depends_on:
+            - cassandra
+        ports:
+            - "8080"
+
+    cassandra:
+        image: "cassandra:3.9"
