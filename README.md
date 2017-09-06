@@ -7,10 +7,9 @@ It uses Brave to create spans which are reported to the server.
 
 ## Build Docker image
 
-Docker image is automatically built once commit is pushed to the master branch.
+Docker image is automatically built once commit is pushed to the master branch. To build it manually run:
 ```bash
-docker build -t pavolloffay/xdock-zipkin-brave:latest .
-docker push pavolloffay/xdock-zipkin-brave:latest
+docker build -t jaegertracing/xdock-zipkin-brave:latest .
 ```
 
    [ci-img]: https://travis-ci.org/jaegertracing/xdock-zipkin-brave.svg?branch=master
