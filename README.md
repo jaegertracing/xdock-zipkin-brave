@@ -12,5 +12,11 @@ Docker image is automatically built once commit is pushed to the master branch. 
 docker build -t jaegertracing/xdock-zipkin-brave:latest .
 ```
 
+## Build and test
+```bash
+./mvnw test
+make crossdock
+```
+
    [ci-img]: https://travis-ci.org/jaegertracing/xdock-zipkin-brave.svg?branch=master
    [ci]: https://travis-ci.org/jaegertracing/xdock-zipkin-brave

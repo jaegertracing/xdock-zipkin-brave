@@ -5,6 +5,9 @@ language: java
 jdk:
 - oraclejdk8
 
+services:
+- docker
+
 cache:
   directories:
   - $HOME/.m2/repository
@@ -13,8 +16,11 @@ install:
   # Override default travis to use the maven wrapper
   - ./mvnw install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 
-script:
-  - ./mvnw test
+jobs:
+  include:
+    - stage: unit test and crossdock
+      script: ./mvnw clean test
+    - script: make crossdock-fresh
 
 branches:
   except:
