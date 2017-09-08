@@ -19,7 +19,7 @@ install:
 jobs:
   include:
     - stage: unit test and crossdock
-      script: ./mvnw test
+      script: ./mvnw clean test
     - script: make crossdock-fresh
 
 branches:
