@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.catalina.connector.Connector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -26,12 +28,12 @@ import org.springframework.context.annotation.Bean;
 
 import brave.Tracing;
 import brave.sampler.Sampler;
-import zipkin.Span;
-import zipkin.reporter.AsyncReporter;
-import zipkin.reporter.Encoding;
-import zipkin.reporter.Reporter;
-import zipkin.reporter.Sender;
-import zipkin.reporter.okhttp3.OkHttpSender;
+import zipkin2.Span;
+import zipkin2.codec.Encoding;
+import zipkin2.codec.SpanBytesEncoder;
+import zipkin2.reporter.AsyncReporter;
+import zipkin2.reporter.Sender;
+import zipkin2.reporter.okhttp3.OkHttpSender;
 
 /**
  * Application used in Jaeger crossdock test to verify that server can consume Zipkin data format.
@@ -40,7 +42,18 @@ import zipkin.reporter.okhttp3.OkHttpSender;
  */
 @SpringBootApplication
 public class Application {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
     private static final String SERVICE_NAME_PREFIX = "crossdock-zipkin-brave";
+
+    public enum Encoding {
+        JSON,
+        THRIFT
+    }
+
+    public interface ZipkinTracing {
+        void flush();
+        Tracing tracing();
+    }
 
     public static void main(String []args) {
         SpringApplication.run(Application.class, args);
@@ -53,23 +66,82 @@ public class Application {
     @Value("${zipkin.encoding}")
     private Encoding encoding;
 
-    @Bean
-    public AsyncReporter<Span> reporter() {
-        Sender sender = OkHttpSender.builder()
-                .endpoint("http://test_driver:9411/api/v1/spans")
-                .encoding(encoding)
-                .build();
-        return AsyncReporter.builder(sender).build();
-    }
+    @Value("${zipkin.json.encoder:JSON_V1}")
+    private SpanBytesEncoder spanBytesEncoder;
+
+    @Value("${zipkin.url:http://jaeger-collector:9411}")
+    private String zipkinUrl;
 
     @Bean
-    public Tracing tracer(Reporter<Span> reporter) {
-        return Tracing.newBuilder()
-                .localServiceName(getServiceName())
-                .sampler(Sampler.ALWAYS_SAMPLE)
-                .traceId128Bit(true)
-                .reporter(reporter)
-                .build();
+    public ZipkinTracing tracer() {
+        zipkinUrl += "/api/v1/spans";
+        if (spanBytesEncoder == SpanBytesEncoder.JSON_V2) {
+            zipkinUrl += "/api/v2/spans";
+        }
+
+        log.info("Zipkin URL = {}, Encoding = {}, JSON version = {}", zipkinUrl, encoding, spanBytesEncoder);
+
+        /**
+         * We have to split here because new artifacts zipkin2 does not support thrift encoding
+         */
+        if (encoding == Encoding.JSON) {
+            return zipkin2Tracing(zipkinUrl, getServiceName(), spanBytesEncoder);
+        } else if (encoding == Encoding.THRIFT) {
+            return zipkinThriftTracing(zipkinUrl, getServiceName());
+        } else {
+            throw new IllegalStateException("zipkin.encoding should be specified!");
+        }
+    }
+
+    public static ZipkinTracing zipkinThriftTracing(String zipkinUrl, String serviceName) {
+        zipkin.reporter.Sender sender = zipkin.reporter.okhttp3.OkHttpSender.builder()
+            .endpoint(zipkinUrl)
+            .encoding(zipkin.reporter.Encoding.THRIFT)
+            .build();
+        zipkin.reporter.AsyncReporter<zipkin.Span> thriftReporter =
+            zipkin.reporter.AsyncReporter.builder(sender).build();
+
+        Tracing tracing = Tracing.newBuilder()
+            .localServiceName(serviceName)
+            .sampler(Sampler.ALWAYS_SAMPLE)
+            .traceId128Bit(true)
+            .reporter(thriftReporter)
+            .build();
+        return new ZipkinTracing() {
+            @Override
+            public void flush() {
+                thriftReporter.flush();
+            }
+
+            @Override
+            public Tracing tracing() {
+                return tracing;
+            }
+        };
+    }
+
+    public static ZipkinTracing zipkin2Tracing(String zipkinUrl, String serviceName, SpanBytesEncoder spanBytesEncoder) {
+        Sender sender = OkHttpSender.newBuilder()
+            .endpoint(zipkinUrl)
+            .encoding(zipkin2.codec.Encoding.JSON)
+            .build();
+        AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build(spanBytesEncoder);
+        Tracing tracing = Tracing.newBuilder()
+            .localServiceName(serviceName)
+            .sampler(Sampler.ALWAYS_SAMPLE)
+            .traceId128Bit(true)
+            .spanReporter(reporter)
+            .build();
+        return new ZipkinTracing() {
+            @Override
+            public void flush() {
+                reporter.flush();
+            }
+            @Override
+            public Tracing tracing() {
+                return tracing;
+            }
+        };
     }
 
     @Bean
