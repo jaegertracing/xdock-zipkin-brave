@@ -26,8 +26,11 @@ COPY mvnw $APP_HOME
 WORKDIR $APP_HOME
 RUN ./mvnw package -Dlicense.skip=true && rm -rf ~/.m2
 
+ENV ZIPKIN_URL=http://jaeger-collector:9411
+ENV JSON_ENCODER=JSON_V1
+
 EXPOSE 8080
 EXPOSE 8081
 
-# set ENCODING env variable when running the container
-CMD java -jar -Dzipkin.encoding=$ENCODING target/jaegertracing-xdock-brave-0.0.1-SNAPSHOT.jar
+# set env variables when starting the container
+CMD java -jar -Dzipkin.encoding=$ENCODING -Dzipkin.json.encoder=$JSON_ENCODER -Dzipkin.url=$ZIPKIN_URL target/jaegertracing-xdock-brave-0.0.1-SNAPSHOT.jar
