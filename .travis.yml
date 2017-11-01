@@ -20,7 +20,7 @@ jobs:
   include:
     - stage: unit test and crossdock
       script: ./mvnw clean test
-    - script: make crossdock-fresh
+    - script: make crossdock
 
 branches:
   except:
