@@ -60,7 +60,11 @@ public class Application {
     }
 
     public String getServiceName() {
-        return String.format("%s-%s", SERVICE_NAME_PREFIX, encoding).toLowerCase();
+          String name = String.format("%s-%s", SERVICE_NAME_PREFIX, encoding).toLowerCase();
+          if (spanBytesEncoder == SpanBytesEncoder.JSON_V2) {
+              name += "-v2";
+          }
+          return name;
     }
 
     @Value("${zipkin.encoding}")
