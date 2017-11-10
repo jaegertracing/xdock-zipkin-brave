@@ -60,7 +60,11 @@ public class Application {
     }
 
     public String getServiceName() {
-        return String.format("%s-%s", SERVICE_NAME_PREFIX, encoding).toLowerCase();
+          String name = String.format("%s-%s", SERVICE_NAME_PREFIX, encoding).toLowerCase();
+          if (spanBytesEncoder == SpanBytesEncoder.JSON_V2) {
+              name += "-v2";
+          }
+          return name;
     }
 
     @Value("${zipkin.encoding}")
@@ -74,9 +78,10 @@ public class Application {
 
     @Bean
     public ZipkinTracing tracer() {
-        zipkinUrl += "/api/v1/spans";
         if (spanBytesEncoder == SpanBytesEncoder.JSON_V2) {
             zipkinUrl += "/api/v2/spans";
+        } else if (spanBytesEncoder == SpanBytesEncoder.JSON_V1) {
+            zipkinUrl += "/api/v1/spans";
         }
 
         log.info("Zipkin URL = {}, Encoding = {}, JSON version = {}", zipkinUrl, encoding, spanBytesEncoder);
