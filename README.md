@@ -14,7 +14,7 @@ docker build -t jaegertracing/xdock-zipkin-brave:latest .
 
 ## Build and test
 ```bash
-./mvnw test## License
+./mvnw test
   
 make crossdock
 ```
