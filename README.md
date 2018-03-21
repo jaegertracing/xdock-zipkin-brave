@@ -16,8 +16,6 @@ docker build -t jaegertracing/xdock-zipkin-brave:latest .
 ```bash
 ./mvnw test## License
   
-[Apache 2.0 License](./LICENSE).
-
 make crossdock
 ```
 
