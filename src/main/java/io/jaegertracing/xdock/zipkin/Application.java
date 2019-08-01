@@ -47,7 +47,8 @@ public class Application {
 
     public enum Encoding {
         JSON,
-        THRIFT
+        THRIFT,
+        PROTO
     }
 
     public interface ZipkinTracing {
@@ -78,7 +79,7 @@ public class Application {
 
     @Bean
     public ZipkinTracing tracer() {
-        if (spanBytesEncoder == SpanBytesEncoder.JSON_V2) {
+        if (spanBytesEncoder == SpanBytesEncoder.JSON_V2 || spanBytesEncoder == SpanBytesEncoder.PROTO3) {
             zipkinUrl += "/api/v2/spans";
         } else if (spanBytesEncoder == SpanBytesEncoder.JSON_V1) {
             zipkinUrl += "/api/v1/spans";
@@ -93,6 +94,8 @@ public class Application {
             return zipkin2Tracing(zipkinUrl, getServiceName(), spanBytesEncoder);
         } else if (encoding == Encoding.THRIFT) {
             return zipkinThriftTracing(zipkinUrl, getServiceName());
+        } else if (encoding == Encoding.PROTO) {
+            return zipkinProtoTracing(zipkinUrl, getServiceName(), spanBytesEncoder);
         } else {
             throw new IllegalStateException("zipkin.encoding should be specified!");
         }
@@ -103,8 +106,7 @@ public class Application {
             .endpoint(zipkinUrl)
             .encoding(zipkin.reporter.Encoding.THRIFT)
             .build();
-        zipkin.reporter.AsyncReporter<zipkin.Span> thriftReporter =
-            zipkin.reporter.AsyncReporter.builder(sender).build();
+        zipkin.reporter.AsyncReporter<zipkin.Span> thriftReporter = zipkin.reporter.AsyncReporter.create(sender);
 
         Tracing tracing = Tracing.newBuilder()
             .localServiceName(serviceName)
@@ -148,6 +150,30 @@ public class Application {
             }
         };
     }
+
+     public static ZipkinTracing zipkinProtoTracing(String zipkinUrl, String serviceName, SpanBytesEncoder spanBytesEncoder) {
+         Sender sender = OkHttpSender.newBuilder()
+                 .endpoint(zipkinUrl)
+                 .encoding(zipkin2.codec.Encoding.PROTO3)
+                 .build();
+         AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build(spanBytesEncoder);
+         Tracing tracing = Tracing.newBuilder()
+                 .localServiceName(serviceName)
+                 .sampler(Sampler.ALWAYS_SAMPLE)
+                 .traceId128Bit(true)
+                 .spanReporter(reporter)
+                 .build();
+         return new ZipkinTracing() {
+             @Override
+             public void flush() {
+                 reporter.flush();
+             }
+             @Override
+             public Tracing tracing() {
+                 return tracing;
+             }
+         };
+     }
 
     @Bean
     public EmbeddedServletContainerFactory servletContainer() {
