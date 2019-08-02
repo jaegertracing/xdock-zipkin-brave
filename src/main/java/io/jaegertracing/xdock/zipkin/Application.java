@@ -94,7 +94,7 @@ public class Application {
         } else if (encoding == Encoding.THRIFT) {
             return zipkinThriftTracing(zipkinUrl, getServiceName());
         } else if (encoding == Encoding.PROTO) {
-            return zipkinProtoTracing(zipkinUrl, getServiceName(), spanBytesEncoder);
+            return zipkinProtoTracing(zipkinUrl, getServiceName());
         } else {
             throw new IllegalStateException("zipkin.encoding should be specified!");
         }
@@ -149,12 +149,12 @@ public class Application {
         };
     }
 
-     public static ZipkinTracing zipkinProtoTracing(String zipkinUrl, String serviceName, SpanBytesEncoder spanBytesEncoder) {
+     public static ZipkinTracing zipkinProtoTracing(String zipkinUrl, String serviceName) {
          Sender sender = OkHttpSender.newBuilder()
                  .endpoint(zipkinUrl)
                  .encoding(zipkin2.codec.Encoding.PROTO3)
                  .build();
-         AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build(spanBytesEncoder);
+         AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
          Tracing tracing = Tracing.newBuilder()
                  .localServiceName(serviceName)
                  .sampler(Sampler.ALWAYS_SAMPLE)
@@ -164,6 +164,7 @@ public class Application {
          return new ZipkinTracing() {
              @Override
              public void flush() {
+                 log.info("zipkinProtoTracing posting to {}", zipkinUrl);
                  reporter.flush();
              }
              @Override

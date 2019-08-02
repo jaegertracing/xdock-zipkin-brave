@@ -21,14 +21,15 @@ services:
             - test_driver
             - zipkin-brave-json
             - zipkin-brave-thrift
+            - zipkin-brave-proto
         environment:
-            - WAIT_FOR=test_driver,zipkin-brave-json,zipkin-brave-thrift
+            - WAIT_FOR=test_driver,zipkin-brave-json,zipkin-brave-thrift,zipkin-brave-proto
             - WAIT_FOR_TIMEOUT=60s
 
             - CALL_TIMEOUT=60s
 
             - AXIS_CLIENTS=test_driver
-            - AXIS_SERVICES=zipkin-brave-json,zipkin-brave-thrift
+            - AXIS_SERVICES=zipkin-brave-json,zipkin-brave-thrift,zipkin-brave-proto
 
             - BEHAVIOR_ENDTOEND=clients,services
 
@@ -47,6 +48,14 @@ services:
             - "8080-8081"
         environment:
             - ENCODING=THRIFT
+
+    zipkin-brave-proto:
+        build: .
+        ports:
+            - "8080-8081"
+        environment:
+            - ENCODING=PROTO
+            - JSON_ENCODER=PROTO3
 
     test_driver:
         image: jaegertracing/test-driver
