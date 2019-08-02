@@ -105,7 +105,7 @@ public class Application {
                 .endpoint(zipkinUrl)
                 .encoding(zipkin2.codec.Encoding.THRIFT)
                 .build();
-        AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build(spanBytesEncoder);
+        AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
         Tracing tracing = Tracing.newBuilder()
             .localServiceName(serviceName)
             .sampler(Sampler.ALWAYS_SAMPLE)
