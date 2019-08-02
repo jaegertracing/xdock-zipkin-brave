@@ -29,7 +29,6 @@ import org.springframework.context.annotation.Bean;
 import brave.Tracing;
 import brave.sampler.Sampler;
 import zipkin2.Span;
-import zipkin2.codec.Encoding;
 import zipkin2.codec.SpanBytesEncoder;
 import zipkin2.reporter.AsyncReporter;
 import zipkin2.reporter.Sender;
@@ -93,7 +92,7 @@ public class Application {
         if (encoding == Encoding.JSON) {
             return zipkin2Tracing(zipkinUrl, getServiceName(), spanBytesEncoder);
         } else if (encoding == Encoding.THRIFT) {
-            return zipkinThriftTracing(zipkinUrl, getServiceName());
+            return zipkinThriftTracing(zipkinUrl, getServiceName(), spanBytesEncoder);
         } else if (encoding == Encoding.PROTO) {
             return zipkinProtoTracing(zipkinUrl, getServiceName(), spanBytesEncoder);
         } else {
@@ -101,23 +100,22 @@ public class Application {
         }
     }
 
-    public static ZipkinTracing zipkinThriftTracing(String zipkinUrl, String serviceName) {
-        zipkin.reporter.Sender sender = zipkin.reporter.okhttp3.OkHttpSender.builder()
-            .endpoint(zipkinUrl)
-            .encoding(zipkin.reporter.Encoding.THRIFT)
-            .build();
-        zipkin.reporter.AsyncReporter<zipkin.Span> thriftReporter = zipkin.reporter.AsyncReporter.create(sender);
-
+    public static ZipkinTracing zipkinThriftTracing(String zipkinUrl, String serviceName, SpanBytesEncoder spanBytesEncoder) {
+        Sender sender = OkHttpSender.newBuilder()
+                .endpoint(zipkinUrl)
+                .encoding(zipkin2.codec.Encoding.THRIFT)
+                .build();
+        AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build(spanBytesEncoder);
         Tracing tracing = Tracing.newBuilder()
             .localServiceName(serviceName)
             .sampler(Sampler.ALWAYS_SAMPLE)
             .traceId128Bit(true)
-            .reporter(thriftReporter)
+            .spanReporter(reporter)
             .build();
         return new ZipkinTracing() {
             @Override
             public void flush() {
-                thriftReporter.flush();
+                reporter.flush();
             }
 
             @Override
