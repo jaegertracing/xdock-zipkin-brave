@@ -92,7 +92,7 @@ public class Application {
         if (encoding == Encoding.JSON) {
             return zipkin2Tracing(zipkinUrl, getServiceName(), spanBytesEncoder);
         } else if (encoding == Encoding.THRIFT) {
-            return zipkinThriftTracing(zipkinUrl, getServiceName(), spanBytesEncoder);
+            return zipkinThriftTracing(zipkinUrl, getServiceName());
         } else if (encoding == Encoding.PROTO) {
             return zipkinProtoTracing(zipkinUrl, getServiceName(), spanBytesEncoder);
         } else {
@@ -100,7 +100,7 @@ public class Application {
         }
     }
 
-    public static ZipkinTracing zipkinThriftTracing(String zipkinUrl, String serviceName, SpanBytesEncoder spanBytesEncoder) {
+    public static ZipkinTracing zipkinThriftTracing(String zipkinUrl, String serviceName) {
         Sender sender = OkHttpSender.newBuilder()
                 .endpoint(zipkinUrl)
                 .encoding(zipkin2.codec.Encoding.THRIFT)
