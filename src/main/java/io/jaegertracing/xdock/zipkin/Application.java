@@ -164,7 +164,6 @@ public class Application {
          return new ZipkinTracing() {
              @Override
              public void flush() {
-                 log.info("zipkinProtoTracing posting to {}", zipkinUrl);
                  reporter.flush();
              }
              @Override
