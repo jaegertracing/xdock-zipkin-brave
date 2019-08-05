@@ -12,6 +12,7 @@ crossdock: crossdock-download-jaeger
 	docker-compose -f $(XDOCK_JAEGER_YAML) -f $(XDOCK_YAML) build $(BRAVE_SERVICES)
 	docker-compose -f $(XDOCK_JAEGER_YAML) -f $(XDOCK_YAML) run crossdock
 
+.PHONY: run-crossdock
 run-crossdock:
 	docker-compose -f $(XDOCK_JAEGER_YAML) -f $(XDOCK_YAML) run crossdock
 
