@@ -1,5 +1,5 @@
 /**
- * Copyright 2017 The Jaeger Authors
+ * Copyright 2017-2019 The Jaeger Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -29,7 +29,6 @@ import org.springframework.context.annotation.Bean;
 import brave.Tracing;
 import brave.sampler.Sampler;
 import zipkin2.Span;
-import zipkin2.codec.Encoding;
 import zipkin2.codec.SpanBytesEncoder;
 import zipkin2.reporter.AsyncReporter;
 import zipkin2.reporter.Sender;
@@ -47,7 +46,8 @@ public class Application {
 
     public enum Encoding {
         JSON,
-        THRIFT
+        THRIFT,
+        PROTO
     }
 
     public interface ZipkinTracing {
@@ -78,7 +78,7 @@ public class Application {
 
     @Bean
     public ZipkinTracing tracer() {
-        if (spanBytesEncoder == SpanBytesEncoder.JSON_V2) {
+        if (spanBytesEncoder == SpanBytesEncoder.JSON_V2 || spanBytesEncoder == SpanBytesEncoder.PROTO3) {
             zipkinUrl += "/api/v2/spans";
         } else if (spanBytesEncoder == SpanBytesEncoder.JSON_V1) {
             zipkinUrl += "/api/v1/spans";
@@ -93,29 +93,29 @@ public class Application {
             return zipkin2Tracing(zipkinUrl, getServiceName(), spanBytesEncoder);
         } else if (encoding == Encoding.THRIFT) {
             return zipkinThriftTracing(zipkinUrl, getServiceName());
+        } else if (encoding == Encoding.PROTO) {
+            return zipkinProtoTracing(zipkinUrl, getServiceName());
         } else {
             throw new IllegalStateException("zipkin.encoding should be specified!");
         }
     }
 
     public static ZipkinTracing zipkinThriftTracing(String zipkinUrl, String serviceName) {
-        zipkin.reporter.Sender sender = zipkin.reporter.okhttp3.OkHttpSender.builder()
-            .endpoint(zipkinUrl)
-            .encoding(zipkin.reporter.Encoding.THRIFT)
-            .build();
-        zipkin.reporter.AsyncReporter<zipkin.Span> thriftReporter =
-            zipkin.reporter.AsyncReporter.builder(sender).build();
-
+        Sender sender = OkHttpSender.newBuilder()
+                .endpoint(zipkinUrl)
+                .encoding(zipkin2.codec.Encoding.THRIFT)
+                .build();
+        AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
         Tracing tracing = Tracing.newBuilder()
             .localServiceName(serviceName)
             .sampler(Sampler.ALWAYS_SAMPLE)
             .traceId128Bit(true)
-            .reporter(thriftReporter)
+            .spanReporter(reporter)
             .build();
         return new ZipkinTracing() {
             @Override
             public void flush() {
-                thriftReporter.flush();
+                reporter.flush();
             }
 
             @Override
@@ -148,6 +148,30 @@ public class Application {
             }
         };
     }
+
+     public static ZipkinTracing zipkinProtoTracing(String zipkinUrl, String serviceName) {
+         Sender sender = OkHttpSender.newBuilder()
+                 .endpoint(zipkinUrl)
+                 .encoding(zipkin2.codec.Encoding.PROTO3)
+                 .build();
+         AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
+         Tracing tracing = Tracing.newBuilder()
+                 .localServiceName(serviceName)
+                 .sampler(Sampler.ALWAYS_SAMPLE)
+                 .traceId128Bit(true)
+                 .spanReporter(reporter)
+                 .build();
+         return new ZipkinTracing() {
+             @Override
+             public void flush() {
+                 reporter.flush();
+             }
+             @Override
+             public Tracing tracing() {
+                 return tracing;
+             }
+         };
+     }
 
     @Bean
     public EmbeddedServletContainerFactory servletContainer() {
